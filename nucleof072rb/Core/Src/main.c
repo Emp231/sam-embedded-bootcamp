@@ -19,6 +19,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -44,6 +46,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint8_t pTxData[3];
+uint8_t pRxData[3];
+uint16_t adcVal = 0;
+uint16_t pwmVal = 0;
 
 /* USER CODE END PV */
 
@@ -87,14 +93,26 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	pTxData[0] = 0x01;
+	pTxData[1] = 0x80;
+	pTxData[2] = 0x00;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	HAL_SPI_TransmitReceive(&hspi1, pTxData, pRxData, 3, HAL_MAX_DELAY);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	adcVal = ((pRxData[1] & 0x03) << 8) | pRxData[2];
+	pwmVal = 1000 + (adcVal * (2000 - 1000)) / 1023;
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, pwmVal);
+	HAL_Delay(10);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
